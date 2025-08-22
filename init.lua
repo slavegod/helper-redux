@@ -26,27 +26,17 @@ local remove = function(event, id)
 	end
 end
 
-local remove_all = function(event)
-	if event then hooks[event] = nil else hooks = {} end
-end
-
-local has = function(event, id)
-	return hooks[event] and hooks[event][id] ~= nil
-end
-
-local get_table = function()
-	return hooks
-end
-
 local sort_list = function(tbl)
-	table.sort(tbl, function(a, b) return a.priority > b.priority end)
+	table.sort(tbl, function(a,b) return a.priority > b.priority end)
 end
 
-local exec = function(list, once_cleanup, stop_on_return, ...)
+local exec = function(list, stop_on_return, ...)
 	for _, data in ipairs(list) do
 		local ok, res = pcall(data.func, ...)
-		if not ok then warn("[hook] error in '" .. tostring(data.id) .. "': " .. tostring(res)) end
-		if data.once then once_cleanup[data.event][data.id] = nil end
+		if not ok then warn("[hook] error in '" .. tostring(data.id) .. "': ".. tostring(res)) end
+		if data.once and hooks[data.event] then
+			hooks[data.event][data.id] = nil
+		end
 		if stop_on_return and res ~= nil then return res end
 	end
 end
@@ -54,35 +44,35 @@ end
 local call = function(event, ...)
 	local list = {}
 	if hooks[event] then
-		for id, data in pairs(hooks[event]) do
-			table.insert(list, {id = id, func = data.func, priority = data.priority, once = data.once, event = event})
+		for id,data in pairs(hooks[event]) do
+			table.insert(list, {id=id, func=data.func, priority=data.priority, once=data.once, event=event})
 		end
 	end
 	if hooks["*"] then
-		for id, data in pairs(hooks["*"]) do
-			table.insert(list, {id = id, func = data.func, priority = data.priority, once = data.once, event = "*"})
+		for id,data in pairs(hooks["*"]) do
+			table.insert(list, {id=id, func=data.func, priority=data.priority, once=data.once, event="*"})
 		end
 	end
 	if #list == 0 then return end
 	sort_list(list)
-	return exec(list, hooks, true, ...)
+	return exec(list, true, ...)
 end
 
 local run = function(event, ...)
 	local list = {}
 	if hooks[event] then
-		for id, data in pairs(hooks[event]) do
-			table.insert(list, {id = id, func = data.func, priority = data.priority, once = data.once, event = event})
+		for id,data in pairs(hooks[event]) do
+			table.insert(list, {id=id, func=data.func, priority=data.priority, once=data.once, event=event})
 		end
 	end
 	if hooks["*"] then
-		for id, data in pairs(hooks["*"]) do
-			table.insert(list, {id = id, func = data.func, priority = data.priority, once = data.once, event = "*"})
+		for id,data in pairs(hooks["*"]) do
+			table.insert(list, {id=id, func=data.func, priority=data.priority, once=data.once, event="*"})
 		end
 	end
 	if #list == 0 then return end
 	sort_list(list)
-	exec(list, hooks, false, ...)
+	exec(list, false, ...)
 end
 
 local bind_signal = function(event, signal)
@@ -91,17 +81,14 @@ local bind_signal = function(event, signal)
 end
 
 local unbind_signal = function(event)
-	if connections[event] then connections[event]:Disconnect() connections[event] = nil end
+	if connections[event] then connections[event]:Disconnect() connections[event]=nil end
 end
 
 hook.add = add
 hook.add_once = add_once
 hook.remove = remove
-hook.remove_all = remove_all
-hook.has = has
 hook.call = call
 hook.run = run
-hook.get_table = get_table
 hook.bind_signal = bind_signal
 hook.unbind_signal = unbind_signal
 
